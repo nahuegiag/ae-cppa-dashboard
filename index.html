@@ -553,7 +553,12 @@ function renderTS() {
   const sendIdx = [];
   ts.d.forEach((d,i) => { if (allDel[i] >= sendThreshold) sendIdx.push(i); });
   const limitedIdx = tsState.lastSends > 0 ? sendIdx.slice(-tsState.lastSends) : sendIdx;
-  const fd = limitedIdx.map(i => ts.d[i]);
+  const fdRaw = limitedIdx.map(i => ts.d[i]);
+  const dowShort = {0:"Dom",1:"Lun",2:"Mar",3:"Mie",4:"Jue",5:"Vie",6:"Sab"};
+  const fd = fdRaw.map(d => {
+    const dt = new Date(d+"T12:00:00");
+    return dowShort[dt.getDay()]+" "+dt.getDate()+"/"+(dt.getMonth()+1);
+  });
   const fa = limitedIdx.map(i => ts.a[i]);
   const fw = limitedIdx.map(i => ts.w[i]);
   const fe = limitedIdx.map(i => ts.e[i]);
@@ -572,29 +577,22 @@ function renderTS() {
 
   const dailyCppa = fd.map((_,i) => fa[i] > 0 ? Math.round((fw[i]*WPP_RATE+fe[i]*EM_RATE)/fa[i]) : null);
 
-  // Day of week names for hover
-  const dowNames = {0:"Dom",1:"Lun",2:"Mar",3:"Mie",4:"Jue",5:"Vie",6:"Sab"};
-  const fdDow = fd.map(d => dowNames[new Date(d+"T12:00:00").getDay()]);
-
   const traces = [];
   if (tsState.show.approved) {
     traces.push({x:fd, y:fa, name:"Aprobados", type:"bar",
       marker:{color:c.col, line:{color:"#161B22",width:0.8}},
-      customdata:fdDow,
-      hovertemplate:"%{customdata} — Aprobados: %{y}<extra></extra>"});
+      hovertemplate:"Aprobados: %{y}<extra></extra>"});
   }
   if (tsState.show.deliveries) {
     traces.push({x:fd, y:fDel, name:"Deliveries", type:"scatter", mode:"lines",
       yaxis:"y2", line:{color:"#76B7B2",width:1.5},
-      customdata:fdDow,
-      hovertemplate:"%{customdata} — Deliveries: %{y:,}<extra></extra>"});
+      hovertemplate:"Deliveries: %{y:,}<extra></extra>"});
   }
   if (tsState.show.cppa) {
     traces.push({x:fd, y:dailyCppa.map(v=>v===null?0:v), name:"CPPA",
       type:"scatter", mode:"lines+markers", yaxis:"y3",
       line:{color:"#F28E2B",width:2}, marker:{color:"#F28E2B",size:3},
-      customdata:fdDow,
-      hovertemplate:"%{customdata} — CPPA: $%{y:.0f}<extra></extra>"});
+      hovertemplate:"CPPA: $%{y:.0f}<extra></extra>"});
   }
 
   const maxApp = Math.max(...fa, 1);
@@ -607,7 +605,7 @@ function renderTS() {
     paper_bgcolor:"#161B22", plot_bgcolor:"#161B22",
     font:{family:"Inter",color:"#E6EDF3",size:11},
     barmode:"stack", bargap:0.15,
-    xaxis:{gridcolor:"#30363D22",tickfont:{size:10,color:"#8B949E"},tickformat:"%b %d"},
+    xaxis:{type:"category",gridcolor:"#30363D22",tickfont:{size:10,color:"#8B949E"}},
     yaxis:{title:{text:"Aprobados",font:{size:9,color:"#8B949E"}},
       gridcolor:"#30363D22",zeroline:false,tickfont:{size:9,color:"#8B949E88"},
       range:[0,maxApp*1.15]},
