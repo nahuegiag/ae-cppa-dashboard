@@ -90,9 +90,33 @@ footer{text-align:center;color:var(--ts);font-size:10px;padding:16px 0;opacity:.
   .controls{gap:4px}
   .pill{padding:4px 8px;font-size:10px}
 }
+/* Password wall */
+.pw-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:var(--bg)}
+.pw-box{text-align:center;width:280px}
+.pw-box svg{width:120px;height:32px;margin-bottom:20px;fill:white}
+.pw-title{font-size:13px;color:var(--ts);margin-bottom:16px;letter-spacing:0.5px}
+.pw-input{width:100%;padding:10px 14px;border:1px solid var(--bd);border-radius:6px;background:var(--cb);color:var(--tx);font-family:inherit;font-size:13px;outline:none;text-align:center;letter-spacing:0.05em;margin-bottom:8px}
+.pw-input:focus{border-color:var(--kb)}
+.pw-input::placeholder{color:#555}
+.pw-btn{width:100%;padding:9px;background:var(--kb);color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:0.05em;text-transform:uppercase}
+.pw-btn:hover{opacity:0.9}
+.pw-err{font-size:11px;color:#E63946;margin-top:6px;min-height:1em}
+.dashboard{display:none}
 </style>
 </head>
 <body>
+
+<div class="pw-screen" id="pwScreen">
+    <div class="pw-box">
+        <svg viewBox="0 0 7774 2048"><path d="M7296.82.052L6752.798 1024l544.022 1023.948h477.424L7239.034 1024 7774.244.052zm-1130.746 0v1705.534L5275.298.052 4205.476 2047.954h470.514l599.916-1147.71 254.406 487.47h-254.406l-178.412 341.108h611.236l166.464 319.132h726.816V.052h-435.96zm-1767.734 0l-599.916 1147.71L3199.138.052h-470.514l1069.822 2047.902L4868.268.052H4398.39zm-2076.172 0l-892.04 1707.424L1072.7 1024 1607.91.052h-477.424L586.464 1024l544.022 1023.948h593.006l166.464-319.132h611.236l-178.412-341.108h-254.406l254.406-487.47 598.678 1147.71h470.514L2322.15.046zM-.244 2047.952h435.33V.05H-.244z"/></svg>
+        <p class="pw-title">AE Campaign CPPA Dashboard</p>
+        <input type="password" class="pw-input" id="pwInput" placeholder="Contraseña" autofocus>
+        <button class="pw-btn" id="pwBtn">Acceder</button>
+        <p class="pw-err" id="pwErr"></p>
+    </div>
+</div>
+
+<div class="dashboard" id="dashboard">
 
 <div class="hd">
     <svg viewBox="0 0 7774 2048" fill="white" style="width:100px;height:26px"><path d="M7296.82.052L6752.798 1024l544.022 1023.948h477.424L7239.034 1024 7774.244.052zm-1130.746 0v1705.534L5275.298.052 4205.476 2047.954h470.514l599.916-1147.71 254.406 487.47h-254.406l-178.412 341.108h611.236l166.464 319.132h726.816V.052h-435.96zm-1767.734 0l-599.916 1147.71L3199.138.052h-470.514l1069.822 2047.902L4868.268.052H4398.39zm-2076.172 0l-892.04 1707.424L1072.7 1024 1607.91.052h-477.424L586.464 1024l544.022 1023.948h593.006l166.464-319.132h611.236l-178.412-341.108h-254.406l254.406-487.47 598.678 1147.71h470.514L2322.15.046zM-.244 2047.952h435.33V.05H-.244z"/></svg>
@@ -281,7 +305,7 @@ function buildTraces(campaigns, mode) {
     text: days.map(d => { const v=Math.round((c.dow[d]||0)/DOW_WEEKS[d]); return v>=5&&c.cppa!==null?"$"+c.cppa.toFixed(0):""; }),
     textposition: "inside", constraintext: "both", insidetextanchor: "middle",
     textfont: {size: 10, color: "#fff", family: "Inter"},
-    hovertemplate: days.map(d => { const avg=Math.round((c.dow[d]||0)/DOW_WEEKS[d]); return `<b>${c.d}</b><br>Prom: ${avg.toLocaleString()} aprobados/dia<br>Deliveries: ${c.totalDel.toLocaleString()}<br>Costo: $${c.cost.toLocaleString(undefined,{maximumFractionDigits:0})}<br>CPPA: ${c.cppa!==null?"$"+c.cppa.toFixed(0):"N/A"}<extra></extra>`; }),
+    hovertemplate: days.map(d => { const avg=Math.round((c.dow[d]||0)/DOW_WEEKS[d]); return `<b>${c.d}</b><br>Prom: ${avg.toLocaleString()} aprobados/dia<br>Total periodo: ${c.app.toLocaleString()} aprobados<br>Deliveries: ${c.totalDel.toLocaleString()}<br>Costo: $${c.cost.toLocaleString(undefined,{maximumFractionDigits:0})}<br>CPPA: ${c.cppa!==null?"$"+c.cppa.toFixed(0):"N/A"}<extra></extra>`; }),
     hoverlabel: {bgcolor: "#1C2128", bordercolor: "#30363D", font: {family: "Inter", size: 11, color: "#C8CDD5"}},
   }));
 }
@@ -452,6 +476,26 @@ const refGrid = document.getElementById("refGrid");
 refGrid.innerHTML = DATA.filter(c => c.desc).slice(0, 22).map(c =>
   `<div class="rc"><div class="dot" style="background:${c.col}"></div><div><div class="rn">${c.d}</div><div class="rd">${c.desc}</div></div></div>`
 ).join("");
+
+// ===== PASSWORD WALL =====
+const PW = 'Kavak26';
+const pwInput = document.getElementById('pwInput');
+const pwBtn = document.getElementById('pwBtn');
+const pwErr = document.getElementById('pwErr');
+function tryPw() {
+  if (pwInput.value === PW) {
+    document.getElementById('pwScreen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    Plotly.Plots.resize('chart');
+  } else {
+    pwErr.textContent = 'Contraseña incorrecta';
+    pwInput.value = '';
+    pwInput.focus();
+  }
+}
+pwBtn.addEventListener('click', tryPw);
+pwInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') tryPw(); });
 </script>
+</div>
 </body>
 </html>
