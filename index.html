@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AE Campaign CPPA Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+:root{--kb:#4A7FBF;--bg:#0D1117;--cb:#161B22;--bd:#30363D;--tx:#E6EDF3;--ts:#7E8A94;--green:#4D9E63;--red:#F85149;--amber:#F0883E;--cyan:#6B98C7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:'Inter',system-ui,sans-serif;padding:clamp(16px,3vw,40px);max-width:1600px;margin:0 auto}
+
+/* Header */
+.hd{display:flex;align-items:center;gap:16px;margin-bottom:24px}
+.hd h1{font-size:clamp(18px,2.5vw,24px);font-weight:700;letter-spacing:-0.3px}
+.hd p{color:var(--ts);font-size:12px;margin-top:2px}
+
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:24px}
+.kpi{background:var(--cb);border:1px solid var(--bd);border-radius:10px;padding:14px 16px}
+.kpi .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .v.blue{color:var(--kb)}.kpi .v.green{color:var(--green)}.kpi .v.amber{color:var(--amber)}.kpi .v.cyan{color:var(--cyan)}
+.kpi .l{font-size:9px;text-transform:uppercase;color:var(--ts);margin-top:3px;letter-spacing:.6px;font-weight:500}
+
+/* Cards */
+.card{background:var(--cb);border:1px solid var(--bd);border-radius:10px;padding:20px;margin-bottom:16px}
+.card-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.card-header h3{font-size:15px;font-weight:600}
+
+/* Controls */
+.controls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pill{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid var(--bd);background:transparent;color:var(--ts);cursor:pointer;transition:all .15s}
+.pill:hover{border-color:var(--kb);color:var(--tx)}
+.pill.active{background:var(--kb);border-color:var(--kb);color:#fff}
+.pill-sep{width:1px;height:20px;background:var(--bd);margin:0 4px}
+.view-toggle{display:flex;border:1px solid var(--bd);border-radius:6px;overflow:hidden}
+.view-toggle button{padding:5px 10px;font-size:11px;font-weight:600;border:none;background:transparent;color:var(--ts);cursor:pointer;font-family:inherit;transition:all .15s}
+.view-toggle button.active{background:var(--kb);color:#fff}
+.view-toggle button:hover:not(.active){color:var(--tx)}
+
+/* Chart */
+#chart{height:500px;transition:height .3s}
+
+/* Table */
+.tw{overflow-x:auto;margin-top:4px}
+.search-wrap{position:relative;margin-bottom:12px;max-width:280px}
+.search-wrap input{width:100%;padding:7px 10px 7px 32px;border-radius:6px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-family:inherit;font-size:12px;outline:none}
+.search-wrap input:focus{border-color:var(--kb)}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--ts);width:14px;height:14px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--bd);color:var(--ts);font-weight:600;white-space:nowrap;cursor:pointer;user-select:none;font-size:11px;text-transform:uppercase;letter-spacing:.4px;transition:color .15s}
+th:hover{color:var(--kb)}
+th .arrow{font-size:9px;margin-left:3px;opacity:.4}
+th.sorted .arrow{opacity:1;color:var(--kb)}
+td{padding:7px 10px;border-bottom:1px solid var(--bd);white-space:nowrap}
+td.n{text-align:right;font-variant-numeric:tabular-nums}
+tr{transition:background .1s}
+tr:hover{background:#ffffff06}
+tr.lc{opacity:.45;font-style:italic}
+tr.lc td:first-child::after{content:' *';font-size:.7em;color:var(--ts)}
+tr.hidden{display:none}
+.dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:6px;flex-shrink:0;vertical-align:middle}
+.badge{padding:2px 6px;border-radius:4px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.badge.wa{background:#4A7FBF22;color:#6B98C7}
+.badge.em{background:#4D9E6322;color:#4D9E63}
+.cppa-bar{display:inline-flex;align-items:center;gap:6px}
+.cppa-bar .bar{height:4px;border-radius:2px;min-width:2px;max-width:80px}
+.cppa-bar .val{font-variant-numeric:tabular-nums;min-width:40px;text-align:right}
+
+/* Reference grid */
+.rg{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-bottom:24px}
+.rc{display:flex;align-items:flex-start;gap:8px;background:var(--cb);border:1px solid var(--bd);border-radius:8px;padding:10px 12px;cursor:default;transition:border-color .15s}
+.rc:hover{border-color:var(--kb)}
+.rc .dot{margin-top:4px;flex-shrink:0}
+.rn{font-weight:600;font-size:12px}
+.rd{font-size:10px;color:var(--ts);margin-top:1px;line-height:1.4}
+
+/* Notes */
+.notes{background:var(--cb);border-left:3px solid var(--kb);border-radius:0 10px 10px 0;padding:14px 18px;margin-bottom:24px}
+.notes h4{margin-bottom:4px;font-size:13px;font-weight:600}
+.notes li{font-size:11px;color:var(--ts);margin-bottom:2px;line-height:1.5}
+.notes code{background:var(--bg);padding:1px 4px;border-radius:3px;font-size:10px}
+footer{text-align:center;color:var(--ts);font-size:10px;padding:16px 0;opacity:.7}
+
+/* Responsive */
+@media(max-width:768px){
+  .kpis{grid-template-columns:repeat(3,1fr)}
+  #chart{height:350px}
+  .controls{gap:4px}
+  .pill{padding:4px 8px;font-size:10px}
+}
+</style>
+</head>
+<body>
+
+<div class="hd">
+    <svg viewBox="0 0 7774 2048" fill="white" style="width:100px;height:26px"><path d="M7296.82.052L6752.798 1024l544.022 1023.948h477.424L7239.034 1024 7774.244.052zm-1130.746 0v1705.534L5275.298.052 4205.476 2047.954h470.514l599.916-1147.71 254.406 487.47h-254.406l-178.412 341.108h611.236l166.464 319.132h726.816V.052h-435.96zm-1767.734 0l-599.916 1147.71L3199.138.052h-470.514l1069.822 2047.902L4868.268.052H4398.39zm-2076.172 0l-892.04 1707.424L1072.7 1024 1607.91.052h-477.424L586.464 1024l544.022 1023.948h593.006l166.464-319.132h611.236l-178.412-341.108h-254.406l254.406-487.47 598.678 1147.71h470.514L2322.15.046zM-.244 2047.952h435.33V.05H-.244z"/></svg>
+    <div>
+        <h1>AE Campaign CPPA Dashboard</h1>
+        <p>Atribucion: Canal Lifecycle (Amplitude) — Feb 07 - Apr 08, 2026 — L60D</p>
+    </div>
+</div>
+
+<div class="kpis">
+    <div class="kpi"><div class="v blue">11,570</div><div class="l">Aprobados LC</div></div>
+    <div class="kpi"><div class="v cyan">9.03M</div><div class="l">WPP Deliveries</div></div>
+    <div class="kpi"><div class="v cyan">13.38M</div><div class="l">Email Deliveries</div></div>
+    <div class="kpi"><div class="v amber">$433K</div><div class="l">Costo WPP</div></div>
+    <div class="kpi"><div class="v green">$3.3K</div><div class="l">Costo Email</div></div>
+    <div class="kpi"><div class="v blue">$436K</div><div class="l">Costo Total</div></div>
+    <div class="kpi"><div class="v amber">$37.5</div><div class="l">CPPA Blended</div></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Aprobados LC promedio por dia</h3>
+        <div class="controls">
+            <div class="view-toggle" id="viewToggle">
+                <button class="active" data-mode="abs">Absoluto</button>
+                <button data-mode="pct">%</button>
+            </div>
+            <div class="pill-sep"></div>
+            <button class="pill" data-filter="all">Todas</button>
+            <button class="pill active" data-filter="top10">Top 10</button>
+            <button class="pill" data-filter="top5">Top 5</button>
+            <div class="pill-sep"></div>
+            <button class="pill" data-filter="wpp">WPP</button>
+            <button class="pill" data-filter="email">Email</button>
+            <div class="pill-sep"></div>
+            <button class="pill" data-filter="weekday">L–V</button>
+        </div>
+    </div>
+    <div id="chart"></div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Performance por Campania</h3>
+        <div class="controls">
+            <button class="pill active" data-tbl="all">Todas</button>
+            <button class="pill" data-tbl="wpp">WPP</button>
+            <button class="pill" data-tbl="email">Email</button>
+        </div>
+    </div>
+    <div class="search-wrap">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M11.5 7a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Zm-.82 4.74a6 6 0 1 1 1.06-1.06l3.04 3.04a.75.75 0 1 1-1.06 1.06l-3.04-3.04Z"/></svg>
+        <input type="text" id="tblSearch" placeholder="Buscar campania...">
+    </div>
+    <div class="tw">
+        <table id="tbl">
+            <thead><tr>
+                <th data-col="0" class="sorted">Campania <span class="arrow">&#9660;</span></th>
+                <th data-col="1">Dia <span class="arrow">&#9660;</span></th>
+                <th data-col="2">Canal <span class="arrow">&#9660;</span></th>
+                <th data-col="3">Deliveries <span class="arrow">&#9660;</span></th>
+                <th data-col="4">Aprobados <span class="arrow">&#9660;</span></th>
+                <th data-col="5">Costo <span class="arrow">&#9660;</span></th>
+                <th data-col="6">CPPA <span class="arrow">&#9660;</span></th>
+            </tr></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<h3 style="margin-bottom:10px;font-size:14px">Referencia de Campanias</h3>
+<div class="rg" id="refGrid"></div>
+
+<div class="notes">
+    <h4>Notas</h4>
+    <ul>
+        <li>Fuente aprobados: Amplitude <code>profilingSimulation_viewed</code> flow=autoequity, Canal=Lifecycle, MX.</li>
+        <li>Fuente WPP: Amplitude <code>Whatsapp Delivered</code> campaign_name contains kuna_financing, MX.</li>
+        <li>Fuente Email: Amplitude <code>Email Delivered</code> personalization_name contains kuna_financing, MX.</li>
+        <li>Atribucion aprobados por campania: <code>gp:utm_campaign</code> contains suffix (ultima UTM del usuario).</li>
+        <li>Costo WPP: $0.04797/delivery. Costo Email: $0.00025/delivery. Moneda: USD.</li>
+        <li>Datos con * tienen &lt;10 aprobados totales (baja confianza).</li>
+    </ul>
+</div>
+
+<footer>AE Lifecycle — Kavak Mexico — Confidencial — Abril 2026</footer>
+
+<script>
+const DATA = [
+  {s:"testintent_v2",d:"Kuna Intent v2",ch:"WH",col:"#4E79A7",wpp:1256970,em:0,app:2386,dow:{Mon:640,Tue:186,Wed:157,Thu:561,Fri:430,Sat:244,Sun:168},desc:"WPP clickers L90D OR email openers+clickers L365D"},
+  {s:"top200perfo_claude",d:"Top 200k (Claude)",ch:"WH",col:"#F28E2B",wpp:1578578,em:0,app:1598,dow:{Mon:282,Tue:134,Wed:518,Thu:93,Fri:300,Sat:165,Sun:106},desc:"Predictive model top scored (AUC 0.91)"},
+  {s:"recoveryapp",d:"Recovery App",ch:"WH",col:"#76B7B2",wpp:161092,em:0,app:1494,dow:{Mon:138,Tue:577,Wed:79,Thu:70,Fri:329,Sat:186,Sun:115},desc:"Historically approved, no recent bill"},
+  {s:"permission",d:"Blacklist Permission",ch:"WH",col:"#E15759",wpp:442826,em:0,app:954,dow:{Mon:408,Tue:60,Wed:42,Thu:49,Fri:193,Sat:119,Sun:83},desc:"Blacklisted users who made leads with Kavak"},
+  {s:"carapproved",d:"Car Approved",ch:"WH",col:"#59A14F",wpp:1364636,em:0,app:777,dow:{Mon:79,Tue:288,Wed:45,Thu:32,Fri:167,Sat:99,Sun:67},desc:"Vehicle Known + Credit Approved"},
+  {s:"recoveryapp_v2",d:"Recovery App v2",ch:"WH",col:"#EDC949",wpp:838753,em:0,app:542,dow:{Mon:43,Tue:214,Wed:31,Thu:25,Fri:119,Sat:65,Sun:45},desc:"Updated recovery app criteria"},
+  {s:"kavakcars",d:"Customers",ch:"WH",col:"#AF7AA1",wpp:548088,em:0,app:398,dow:{Mon:34,Tue:18,Wed:175,Thu:10,Fri:74,Sat:52,Sun:35},desc:"Kavak Cars + Buyers Active + No Intent"},
+  {s:"awareness_buenfin",d:"Awareness (Email)",ch:"EM",col:"#FF9DA7",wpp:0,em:10978796,app:422,dow:{Mon:36,Tue:33,Wed:36,Thu:126,Fri:98,Sat:56,Sun:37},desc:"Broad email awareness"},
+  {s:"leadscerrados",d:"Profiles to Handoff",ch:"WH",col:"#9C755F",wpp:50864,em:0,app:391,dow:{Mon:26,Tue:175,Wed:20,Thu:19,Fri:80,Sat:40,Sun:31},desc:"Completed profiling, pending handoff"},
+  {s:"recoverybots",d:"Recovery Bot",ch:"WH",col:"#BAB0AB",wpp:21530,em:0,app:325,dow:{Mon:23,Tue:15,Wed:136,Thu:11,Fri:71,Sat:44,Sun:25},desc:"Bot interactions without activity 5d+"},
+  {s:"landingnolead_adhoc",d:"Landing No Lead",ch:"WH",col:"#6B98C2",wpp:84568,em:0,app:305,dow:{Mon:134,Tue:20,Wed:14,Thu:21,Fri:60,Sat:33,Sun:23},desc:"Visited /mx/lp/prestamo-por-tu-auto/ in L90D"},
+  {s:"reingreso",d:"Reingreso",ch:"WH",col:"#D4885A",wpp:289496,em:0,app:237,dow:{Mon:13,Tue:14,Wed:13,Thu:93,Fri:52,Sat:30,Sun:22},desc:"Users re-entering AE funnel"},
+  {s:"scorewpp_generic",d:"Has Score WPP",ch:"WH",col:"#8E6EAA",wpp:443706,em:0,app:217,dow:{Mon:95,Tue:11,Wed:10,Thu:12,Fri:42,Sat:27,Sun:20},desc:"Credit score + WPP intent signals"},
+  {s:"testintent_v2_osmoffer",d:"Intent v2 Osmo",ch:"WH",col:"#C7A84D",wpp:56953,em:0,app:180,dow:{Mon:47,Tue:14,Wed:12,Thu:37,Fri:35,Sat:20,Sun:15},desc:"Kuna Intent v2 Osmo Offer variant"},
+  {s:"supplyl4w",d:"Supply L4W",ch:"WH",col:"#7BAA8E",wpp:705981,em:0,app:161,dow:{Mon:14,Tue:61,Wed:13,Thu:10,Fri:34,Sat:15,Sun:14},desc:"Supply last 4 weeks"},
+  {s:"claudehotshot",d:"Claude Hot Shot",ch:"WH",col:"#C47878",wpp:24165,em:0,app:153,dow:{Mon:9,Tue:7,Wed:57,Thu:11,Fri:35,Sat:21,Sun:13},desc:"LAL v1 lookalike audience"},
+  {s:"leadnoprof",d:"Lead No Profile",ch:"WH",col:"#A8927A",wpp:21599,em:0,app:150,dow:{Mon:64,Tue:12,Wed:7,Thu:8,Fri:30,Sat:16,Sun:13},desc:"Started profiling, didn't complete in 4d"},
+  {s:"recentregs",d:"Regs L90D",ch:"WH",col:"#88A0B8",wpp:284234,em:0,app:140,dow:{Mon:12,Tue:6,Wed:48,Thu:7,Fri:31,Sat:22,Sun:14},desc:"Recent registrations L90D"},
+  {s:"claude_auto",d:"Claude LAL",ch:"WH",col:"#B89870",wpp:176201,em:0,app:104,dow:{Mon:8,Tue:6,Wed:41,Thu:4,Fri:22,Sat:14,Sun:9},desc:"Automated Claude lookalike"},
+  {s:"havescorereacted_buenfin",d:"Have Score (Email)",ch:"EM",col:"#9E8EA0",wpp:0,em:2332782,app:103,dow:{Mon:9,Tue:8,Wed:8,Thu:33,Fri:23,Sat:12,Sun:10},desc:"Email to users with credit score"},
+  {s:"leadsl30d",d:"Leads L60D",ch:"WH",col:"#7A9E6E",wpp:17794,em:0,app:101,dow:{Mon:8,Tue:4,Wed:4,Thu:35,Fri:25,Sat:15,Sun:10},desc:"Entered AE flow in L90D"},
+  {s:"click",d:"Click Retarget",ch:"WH",col:"#B8806E",wpp:68061,em:0,app:97,dow:{Mon:22,Tue:8,Wed:7,Thu:8,Fri:25,Sat:17,Sun:10},desc:"Click retargeting segment"},
+  {s:"top100perfo",d:"Top 100k Perfo",ch:"WH",col:"#6E8E9E",wpp:52210,em:0,app:96,dow:{Mon:9,Tue:5,Wed:35,Thu:5,Fri:21,Sat:13,Sun:8},desc:"Top 100K performance segment"},
+  {s:"lowticket",d:"Low Ticket",ch:"WH",col:"#C7B088",wpp:88995,em:0,app:82,dow:{Mon:5,Tue:31,Wed:6,Thu:4,Fri:19,Sat:11,Sun:6},desc:"Low ticket segment"},
+  {s:"testintent_v2_noosmoffer",d:"Intent v2 NoOsmo",ch:"WH",col:"#4E79A7",wpp:41470,em:0,app:73,dow:{Mon:21,Tue:5,Wed:4,Thu:13,Fri:16,Sat:8,Sun:6},desc:"Kuna Intent v2 No Osmo variant"},
+  {s:"reentered",d:"Re-entered",ch:"WH",col:"#F28E2B",wpp:173783,em:0,app:70,dow:{Mon:8,Tue:5,Wed:4,Thu:22,Fri:17,Sat:7,Sun:7},desc:"Re-entered funnel users"},
+  {s:"notdelivered",d:"Not Delivered",ch:"WH",col:"#76B7B2",wpp:172063,em:0,app:40,dow:{Mon:4,Tue:14,Wed:2,Thu:3,Fri:9,Sat:4,Sun:4},desc:"Previously undelivered retry"},
+  {s:"topperfoclaude",d:"Top Perfo Claude",ch:"WH",col:"#E15759",wpp:49302,em:0,app:22,dow:{Mon:2,Tue:1,Wed:8,Thu:1,Fri:5,Sat:3,Sun:2},desc:"Top performance Claude variant"},
+  {s:"kunaonboarding_checklist",d:"Onboarding Check",ch:"EM",col:"#59A14F",wpp:0,em:27206,app:9,dow:{Mon:1,Tue:1,Wed:1,Thu:2,Fri:2,Sat:1,Sun:1},desc:"Onboarding checklist email"},
+  {s:"kunaonboarding_email2",d:"Onboarding Email2",ch:"EM",col:"#EDC949",wpp:0,em:26449,app:7,dow:{Mon:1,Tue:1,Wed:1,Thu:1,Fri:1,Sat:1,Sun:1},desc:"Onboarding email sequence 2"},
+  {s:"kunaonboarding_wpp1",d:"Onboarding WPP1",ch:"WH",col:"#AF7AA1",wpp:20616,em:0,app:0,dow:{},desc:"Onboarding WPP sequence 1"},
+  {s:"kunaonboarding_wpp2",d:"Onboarding WPP2",ch:"WH",col:"#FF9DA7",wpp:18092,em:0,app:0,dow:{},desc:"Onboarding WPP sequence 2"},
+  {s:"highticket",d:"High Ticket",ch:"WH",col:"#9C755F",wpp:17088,em:0,app:4,dow:{Mon:0,Tue:2,Wed:0,Thu:0,Fri:1,Sat:1,Sun:0},desc:"High ticket segment"},
+  {s:"aeviewed2l365",d:"AE Viewed L365",ch:"EM",col:"#BAB0AB",wpp:0,em:10697,app:3,dow:{Mon:0,Tue:1,Wed:0,Thu:1,Fri:0,Sat:1,Sun:0},desc:"AE page viewers last 365 days"},
+];
+
+const DOWS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DOW_ES = {Mon:"Lunes",Tue:"Martes",Wed:"Miercoles",Thu:"Jueves",Fri:"Viernes",Sat:"Sabado",Sun:"Domingo"};
+const WPP_RATE = 0.04797, EM_RATE = 0.00025;
+// Number of each DOW in the L60D period (Feb 7 - Apr 8 2026)
+const DOW_WEEKS = {Mon:9,Tue:9,Wed:9,Thu:8,Fri:8,Sat:9,Sun:9};
+// Total LC Approved by DOW from Channel=Lifecycle query (all campaigns, not just utm-attributed)
+const LC_TOTAL_DOW = {Mon:2964,Tue:1920,Wed:2311,Thu:1571,Fri:1675,Sat:694,Sun:435};
+
+// Enrich data
+DATA.forEach(c => {
+  c.cost = c.wpp * WPP_RATE + c.em * EM_RATE;
+  c.totalDel = c.wpp + c.em;
+  c.cppa = c.app > 0 ? c.cost / c.app : null;
+  c.appTotal = Object.values(c.dow).reduce((a,b) => a+b, 0);
+  // Primary DOW
+  let maxD = 0, maxDow = "Mon";
+  DOWS.forEach(d => { if ((c.dow[d]||0) > maxD) { maxD = c.dow[d]||0; maxDow = d; }});
+  c.primaryDow = maxDow;
+});
+
+// ============ CHART ============
+let currentFilter = "top10";
+let currentMode = "abs";
+let showWeekdays = false;
+
+function getFilteredData(filter) {
+  const all = DATA.filter(c => c.app > 0);
+  switch(filter) {
+    case "top10": return all.slice(0, 10);
+    case "top5": return all.slice(0, 5);
+    case "wpp": return all.filter(c => c.ch === "WH");
+    case "email": return all.filter(c => c.ch === "EM");
+    default: return all;
+  }
+}
+
+function buildTraces(campaigns, mode) {
+  const sorted = [...campaigns].sort((a,b) => b.appTotal - a.appTotal);
+  const days = showWeekdays ? ["Mon","Tue","Wed","Thu","Fri"] : DOWS;
+  const xLabels = days.map(d => DOW_ES[d]);
+
+  if (mode === "pct") {
+    const dowTotals = {};
+    days.forEach(d => { dowTotals[d] = sorted.reduce((sum, c) => sum + (c.dow[d]||0), 0); });
+    return sorted.map(c => ({
+      x: xLabels,
+      y: days.map(d => dowTotals[d] > 0 ? ((c.dow[d]||0)/dowTotals[d]*100) : 0),
+      name: c.d, type: "bar", marker: {color: c.col},
+      text: days.map(d => { const pct = dowTotals[d] > 0 ? (c.dow[d]||0)/dowTotals[d]*100 : 0; return pct >= 5 ? pct.toFixed(0)+"%" : ""; }),
+      textposition: "inside", textfont: {size: 10, color: "#fff", family: "Inter"},
+      hovertemplate: days.map(d => { const v=c.dow[d]||0; const pct=dowTotals[d]>0?(v/dowTotals[d]*100).toFixed(1):"0"; return `<b>${c.d}</b><br>Prom: ${Math.round(v/DOW_WEEKS[d]).toLocaleString()}/dia<br>% del dia: ${pct}%<br>CPPA: ${c.cppa!==null?"$"+c.cppa.toFixed(0):"N/A"}<extra></extra>`; }),
+      hoverlabel: {bgcolor: "#1C2128", bordercolor: "#30363D", font: {family: "Inter", size: 11, color: "#C8CDD5"}},
+    }));
+  }
+
+  // Average per day: divide accumulated by number of that DOW in the period
+  return sorted.map(c => ({
+    x: xLabels,
+    y: days.map(d => Math.round((c.dow[d]||0) / DOW_WEEKS[d])),
+    name: c.d, type: "bar", marker: {color: c.col, line: {color: "#161B22", width: 1.5}},
+    text: days.map(d => { const v=Math.round((c.dow[d]||0)/DOW_WEEKS[d]); return v>=5&&c.cppa!==null?"$"+c.cppa.toFixed(0):""; }),
+    textposition: "inside", constraintext: "both", insidetextanchor: "middle",
+    textfont: {size: 10, color: "#fff", family: "Inter"},
+    hovertemplate: days.map(d => { const avg=Math.round((c.dow[d]||0)/DOW_WEEKS[d]); return `<b>${c.d}</b><br>Prom: ${avg.toLocaleString()} aprobados/dia<br>Deliveries: ${c.totalDel.toLocaleString()}<br>Costo: $${c.cost.toLocaleString(undefined,{maximumFractionDigits:0})}<br>CPPA: ${c.cppa!==null?"$"+c.cppa.toFixed(0):"N/A"}<extra></extra>`; }),
+    hoverlabel: {bgcolor: "#1C2128", bordercolor: "#30363D", font: {family: "Inter", size: 11, color: "#C8CDD5"}},
+  }));
+}
+
+const chartLayout = {
+  barmode: "stack",
+  paper_bgcolor: "#161B22",
+  plot_bgcolor: "#161B22",
+  font: {family: "Inter", color: "#E6EDF3", size: 11},
+  xaxis: {gridcolor: "#30363D", tickfont: {size: 13, weight: 700}, fixedrange: true},
+  yaxis: {title: "Aprobados LC prom/dia", gridcolor: "#30363D22", fixedrange: true},
+  legend: {orientation: "h", y: -0.18, font: {size: 9}, itemwidth: 25, bgcolor: "transparent"},
+  margin: {t: 16, b: 90, l: 55, r: 16},
+  bargap: 0.2,
+  hoverlabel: {bgcolor: "#1C2128", bordercolor: "#30363D", font: {family: "Inter", size: 11, color: "#C8CDD5"}},
+  hovermode: "closest",
+};
+
+function renderChart() {
+  const campaigns = getFilteredData(currentFilter);
+  const traces = buildTraces(campaigns, currentMode);
+  const layout = {...chartLayout};
+  const days = showWeekdays ? ["Mon","Tue","Wed","Thu","Fri"] : DOWS;
+  const xLabels = days.map(d => DOW_ES[d]);
+
+  if (currentMode === "pct") {
+    layout.yaxis = {...layout.yaxis, title: "% del total por dia", range: [0, 100]};
+    layout.barmode = "stack";
+  }
+
+  // Day total annotations: real LC avg, positioned at top of visible bar
+  if (currentMode !== "pct") {
+    const sorted = [...campaigns].sort((a,b) => b.appTotal - a.appTotal);
+    const barTops = days.map(d => sorted.reduce((s,c) => s + Math.round((c.dow[d]||0)/DOW_WEEKS[d]), 0));
+    const dayAvgs = days.map(d => Math.round(LC_TOTAL_DOW[d] / DOW_WEEKS[d]));
+    layout.annotations = days.map((d,i) => ({
+      x: xLabels[i], y: barTops[i],
+      text: dayAvgs[i].toLocaleString(),
+      showarrow: false, yshift: 14,
+      font: {size: 10, color: "#8B949E", family: "Inter", weight: 600},
+    }));
+  }
+
+  Plotly.react("chart", traces, layout, {
+    responsive: true,
+    displayModeBar: false,
+    scrollZoom: false,
+  });
+}
+
+// Filter pills
+document.querySelectorAll("[data-filter]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const f = btn.dataset.filter;
+    if (f === "weekday") {
+      showWeekdays = !showWeekdays;
+      btn.classList.toggle("active", showWeekdays);
+    } else {
+      document.querySelectorAll("[data-filter]:not([data-filter='weekday'])").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = f;
+    }
+    renderChart();
+  });
+});
+
+// View toggle
+document.querySelectorAll("#viewToggle button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#viewToggle button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentMode = btn.dataset.mode;
+    renderChart();
+  });
+});
+
+renderChart();
+
+// ============ TABLE ============
+const maxCppa = Math.max(...DATA.filter(c => c.cppa !== null).map(c => c.cppa));
+
+function cppaColor(cppa) {
+  if (cppa === null) return "var(--ts)";
+  const ratio = Math.min(cppa / 120, 1);
+  if (ratio < 0.25) return "#4D9E63";
+  if (ratio < 0.5) return "#F0883E";
+  return "#F85149";
+}
+
+function cppaBarWidth(cppa) {
+  if (cppa === null) return 0;
+  return Math.max(2, Math.min(80, (cppa / 120) * 80));
+}
+
+function renderTable() {
+  const tbody = document.querySelector("#tbl tbody");
+  tbody.innerHTML = DATA.map(c => {
+    const cppaStr = c.cppa !== null ? "$" + c.cppa.toFixed(0) : "—";
+    const lowConf = c.app < 10;
+    const cls = lowConf ? ' class="lc"' : '';
+    const badge = c.ch === "WH" ? "wa" : "em";
+    const color = cppaColor(c.cppa);
+    const barW = cppaBarWidth(c.cppa);
+
+    return `<tr${cls} data-ch="${c.ch}" data-name="${c.d.toLowerCase()}">
+      <td><span class="dot" style="background:${c.col}"></span>${c.d}</td>
+      <td>${DOW_ES[c.primaryDow]}</td>
+      <td><span class="badge ${badge}">${c.ch}</span></td>
+      <td class="n">${c.totalDel.toLocaleString()}</td>
+      <td class="n">${c.app.toLocaleString()}</td>
+      <td class="n">$${c.cost.toLocaleString(undefined,{maximumFractionDigits:0})}</td>
+      <td class="n"><div class="cppa-bar"><span class="bar" style="width:${barW}px;background:${color}"></span><span class="val" style="color:${color}">${cppaStr}</span></div></td>
+    </tr>`;
+  }).join("");
+}
+
+renderTable();
+
+// Table sorting
+let sortCol = 4, sortDir = "d";
+document.querySelectorAll("#tbl th").forEach(th => {
+  th.addEventListener("click", () => {
+    const col = +th.dataset.col;
+    if (sortCol === col) sortDir = sortDir === "a" ? "d" : "a";
+    else { sortCol = col; sortDir = "d"; }
+
+    document.querySelectorAll("#tbl th").forEach(t => t.classList.remove("sorted"));
+    th.classList.add("sorted");
+
+    const tbody = document.querySelector("#tbl tbody");
+    const rows = Array.from(tbody.rows);
+    rows.sort((a, b) => {
+      let av = a.cells[col].textContent.replace(/[$,]/g, "").trim();
+      let bv = b.cells[col].textContent.replace(/[$,]/g, "").trim();
+      const an = parseFloat(av), bn = parseFloat(bv);
+      if (!isNaN(an) && !isNaN(bn)) return sortDir === "a" ? an - bn : bn - an;
+      return sortDir === "a" ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  });
+});
+
+// Table filter pills
+document.querySelectorAll("[data-tbl]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("[data-tbl]").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const filter = btn.dataset.tbl;
+    document.querySelectorAll("#tbl tbody tr").forEach(tr => {
+      if (filter === "all") { tr.classList.remove("hidden"); return; }
+      const ch = tr.dataset.ch;
+      const match = (filter === "wpp" && ch === "WH") || (filter === "email" && ch === "EM");
+      tr.classList.toggle("hidden", !match);
+    });
+  });
+});
+
+// Table search
+document.getElementById("tblSearch").addEventListener("input", function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll("#tbl tbody tr").forEach(tr => {
+    tr.classList.toggle("hidden", q && !tr.dataset.name.includes(q));
+  });
+});
+
+// ============ REFERENCE GRID ============
+const refGrid = document.getElementById("refGrid");
+refGrid.innerHTML = DATA.filter(c => c.desc).slice(0, 22).map(c =>
+  `<div class="rc"><div class="dot" style="background:${c.col}"></div><div><div class="rn">${c.d}</div><div class="rd">${c.desc}</div></div></div>`
+).join("");
+</script>
+</body>
+</html>
