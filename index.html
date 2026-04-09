@@ -549,7 +549,7 @@ function renderTS() {
   // Filter to real send days (deliveries > 1% of max day for this campaign)
   const allDel = ts.d.map((_,i) => ts.w[i] + ts.e[i]);
   const maxDayDel = Math.max(...allDel);
-  const sendThreshold = Math.max(maxDayDel * 0.01, 100);
+  const sendThreshold = Math.max(maxDayDel * 0.05, 500);
   const sendIdx = [];
   ts.d.forEach((d,i) => { if (allDel[i] >= sendThreshold) sendIdx.push(i); });
   const limitedIdx = tsState.lastSends > 0 ? sendIdx.slice(-tsState.lastSends) : sendIdx;
